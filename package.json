@@ -55,6 +55,7 @@
         "hak": "tsx scripts/hak/index.ts",
         "test": "playwright test",
         "test:open": "pnpm test --ui",
+        "test:attachment-preview": "tsx --test tests/attachment-preview/*.test.ts",
         "test:screenshots:build": "docker build playwright -t element-desktop-playwright --platform linux/amd64",
         "test:screenshots:run": "docker run --rm --network host -v $(pwd):/work/element-desktop -v element-desktop-playwright:/work/element-desktop/node_modules -v /var/run/docker.sock:/var/run/docker.sock --platform linux/amd64 -it element-desktop-playwright",
         "postinstall": "electron-builder install-app-deps"

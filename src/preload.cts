@@ -10,6 +10,8 @@ Please see LICENSE files in the repository root for full details.
 
 import { ipcRenderer, contextBridge, IpcRendererEvent } from "electron";
 
+import { setupInlineFilePreview } from "./attachment-preview/inline-file-preview.cjs";
+
 // Expose only expected IPC wrapper APIs to the renderer process to avoid
 // handing out generalised messaging access.
 
@@ -75,5 +77,38 @@ contextBridge.exposeInMainWorld("electron", {
     },
     async getSettingValue(settingName: string): Promise<any> {
         return ipcRenderer.invoke("getSettingValue", settingName);
+    },
+});
+
+const pendingOpenRequests: string[] = [];
+
+ipcRenderer.on("userDownloadCompleted", (_event, payload) => {
+    const name = String(payload?.name || "");
+    const index = pendingOpenRequests.findIndex((pendingName) => !pendingName || pendingName === name);
+    if (index === -1) return;
+
+    pendingOpenRequests.splice(index, 1);
+    ipcRenderer.send("userDownloadAction", { id: payload?.id, open: true });
+});
+
+setupInlineFilePreview({
+    requestDownload: ({ url, fileName, openAfterDownload }) => {
+        if (openAfterDownload) {
+            pendingOpenRequests.push(fileName);
+        }
+
+        const rendererDocument = (globalThis as any).document;
+        if (!rendererDocument?.body) return;
+
+        const anchor = rendererDocument.createElement("a");
+        anchor.href = url;
+        anchor.download = fileName;
+        anchor.rel = "noopener noreferrer";
+        anchor.setAttribute("data-inline-preview-bypass", "1");
+        anchor.style.display = "none";
+
+        rendererDocument.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
     },
 });
